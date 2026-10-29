@@ -1,0 +1,15 @@
+# Core training framework
+torch>=2.5.0
+
+# Tokenization
+tokenizers>=0.21.0
+
+# Configuration
+PyYAML>=6.0.2
+
+# Data processing
+numpy>=2.1.0
+
+# Testing and code quality
+pytest>=8.3.0
+ruff>=0.9.0

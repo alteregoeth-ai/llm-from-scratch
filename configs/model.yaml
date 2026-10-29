@@ -1,0 +1,40 @@
+# Model configuration
+model:
+  name: scratch-gpt
+  vocab_size: 16000
+  d_model: 512
+  n_heads: 8
+  n_layers: 8
+  max_seq_len: 512
+  dropout: 0.1
+  bias: false
+
+# Tokenizer
+tokenizer:
+  type: bpe
+  path: artifacts/tokenizer.json
+  vocab_size: 16000
+  eos_token: "<|endoftext|>"
+
+# Training configuration
+training:
+  batch_size: 4
+  gradient_accumulation_steps: 8
+  max_steps: 10000
+  learning_rate: 0.0003
+  weight_decay: 0.1
+  warmup_steps: 200
+  max_grad_norm: 1.0
+  seed: 42
+
+# Data configuration
+data:
+  train_path: artifacts/train_tokens.bin
+  val_path: artifacts/val_tokens.bin
+  dtype: uint16
+
+# Checkpoint configuration
+checkpoint:
+  output_dir: checkpoints
+  save_every: 500
+  keep_last: 3
