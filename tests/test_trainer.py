@@ -112,6 +112,7 @@ def test_save_and_load_checkpoint(tiny_config, tmp_path):
 
     assert metadata["step"] == 7
     assert metadata["best_val_loss"] == pytest.approx(2.5)
+    assert metadata["train_rng_state"] is None
 
     for original, restored in zip(
         model.parameters(),
@@ -143,6 +144,89 @@ def test_train_creates_checkpoints(tiny_config, tiny_datasets):
     assert (checkpoint_dir / "latest.pt").is_file()
     assert (checkpoint_dir / "best.pt").is_file()
     assert (checkpoint_dir / "step_000002.pt").is_file()
+
+    checkpoint = torch.load(
+        checkpoint_dir / "latest.pt",
+        map_location="cpu",
+        weights_only=False,
+    )
+    assert checkpoint["step"] == 2
+    assert checkpoint["train_rng_state"] is not None
+
+
+def test_train_resumes_from_checkpoint(tiny_config, tiny_datasets):
+    train_dataset, val_dataset = tiny_datasets
+    model = GPTLanguageModel(tiny_config)
+
+    first_history = train(
+        model=model,
+        train_dataset=train_dataset,
+        val_dataset=val_dataset,
+        config=tiny_config,
+        device="cpu",
+        eval_batches=2,
+        log_every=1,
+    )
+
+    checkpoint_path = tmp_path_from_config(tiny_config) / "latest.pt"
+    assert first_history[-1]["step"] == 2
+
+    tiny_config["training"]["max_steps"] = 3
+
+    resumed_history = train(
+        model=model,
+        train_dataset=train_dataset,
+        val_dataset=val_dataset,
+        config=tiny_config,
+        device="cpu",
+        eval_batches=2,
+        log_every=1,
+        resume_from=checkpoint_path,
+    )
+
+    assert len(resumed_history) == 1
+    assert resumed_history[0]["step"] == 3
+    assert np.isfinite(resumed_history[0]["train_loss"])
+    assert np.isfinite(resumed_history[0]["val_loss"])
+
+    checkpoint = torch.load(
+        checkpoint_path,
+        map_location="cpu",
+        weights_only=False,
+    )
+    assert checkpoint["step"] == 3
+    assert checkpoint["train_rng_state"] is not None
+
+
+def test_train_rejects_checkpoint_without_train_rng_state(
+    tiny_config,
+    tiny_datasets,
+    tmp_path,
+):
+    train_dataset, val_dataset = tiny_datasets
+    model = GPTLanguageModel(tiny_config)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=0.001)
+    checkpoint_path = tmp_path / "old_checkpoint.pt"
+
+    save_checkpoint(
+        path=checkpoint_path,
+        model=model,
+        optimizer=optimizer,
+        step=1,
+        best_val_loss=2.5,
+        config=tiny_config,
+    )
+
+    with pytest.raises(ValueError, match="does not contain train_rng_state"):
+        train(
+            model=model,
+            train_dataset=train_dataset,
+            val_dataset=val_dataset,
+            config=tiny_config,
+            device="cpu",
+            eval_batches=2,
+            resume_from=checkpoint_path,
+        )
 
 
 def tmp_path_from_config(config):

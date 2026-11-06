@@ -24,12 +24,23 @@ htmlcov/
 .env.*
 !.env.example
 
-# Training artifacts and model checkpoints
+# Datasets and tokenized data
+data/
+datasets/
+*.bin
+
+# Model weights and checkpoints
 artifacts/*
 !artifacts/.gitkeep
-
 checkpoints/*
 !checkpoints/.gitkeep
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+
+# Archives
+*.zip
 
 # Logs
 *.log
